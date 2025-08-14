@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 class ApiClient {
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'https://api-evm.orderly.org/v1/public',
+      baseUrl: 'https://api-evm.orderly.org',
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 5),
     ),

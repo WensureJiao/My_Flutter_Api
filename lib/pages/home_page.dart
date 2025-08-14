@@ -11,58 +11,48 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ChainRepository _repository = ChainRepository();
-  List<ChainInfoRow>? _rows;
-  String? _error;
+  late final Future<List<ChainInfoRow>> _futureRows;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    try {
-      final data = await _repository.fetchChainInfo();
-      setState(() {
-        _rows = data;
-        _error = null;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
+    // 直接在 initState 中初始化 Future,避免重复请求
+    _futureRows = _repository.fetchChainInfo();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Chain Info')),
-        body: Center(child: Text('错误: $_error')),
-      );
-    }
-
-    if (_rows == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text('Chain Info')),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(title: const Text('Chain Info')),
-      body: ListView.builder(
-        itemCount: _rows!.length,
-        itemBuilder: (context, index) {
-          final row = _rows![index];
-          return ListTile(
-            title: Text(row.name),
-            subtitle: Text(
-              'RPC: ${row.publicRpcUrl}\nExplorer: ${row.explorerBaseUrl}',
-            ),
-            trailing: Text(row.currencySymbol),
-          );
+      body: FutureBuilder<List<ChainInfoRow>>(
+        future: _futureRows,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // 加载状态
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            // 错误状态
+            return Center(child: Text('错误: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            // 空数据状态
+            return const Center(child: Text('没有数据'));
+          } else {
+            // 数据显示
+            final rows = snapshot.data!;
+            return ListView.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, index) {
+                final row = rows[index];
+                return ListTile(
+                  title: Text(row.name),
+                  subtitle: Text(
+                    'RPC: ${row.publicRpcUrl}\nExplorer: ${row.explorerBaseUrl}',
+                  ),
+                  trailing: Text(row.currencySymbol),
+                );
+              },
+            );
+          }
         },
       ),
     );
